@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VENDOR
+  CUSTOMER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orders       Order[]
+  foodOrders   FoodOrder[]
+  bookings     Booking[]
+  properties   Property[] // If vendor/agent
+  restaurants  Restaurant[] // If vendor
+  products     Product[] // If vendor
+}
+
+// --- E-Commerce ---
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  stock       Int
+  images      String[]
+  category    String
+  vendorId    String
+  vendor      User     @relation(fields: [vendorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  total     Float
+  status    String      @default("PENDING") // PENDING, PAID, SHIPPED, DELIVERED
+  items     OrderItem[]
+  createdAt DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+// --- Food Delivery ---
+model Restaurant {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  address     String
+  image       String?
+  ownerId     String
+  owner       User       @relation(fields: [ownerId], references: [id])
+  menu        MenuItem[]
+  orders      FoodOrder[]
+}
+
+model MenuItem {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  name         String
+  price        Float
+  description  String?
+  image        String?
+  foodOrderItems FoodOrderItem[]
+}
+
+model FoodOrder {
+  id           String          @id @default(uuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id])
+  restaurantId String
+  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id])
+  total        Float
+  status       String          @default("PREPARING") // PREPARING, READY, ON_WAY, DELIVERED
+  items        FoodOrderItem[]
+  createdAt    DateTime        @default(now())
+}
+
+model FoodOrderItem {
+  id         String    @id @default(uuid())
+  orderId    String
+  order      FoodOrder @relation(fields: [orderId], references: [id])
+  menuItemId String
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+  quantity   Int
+  price      Float
+}
+
+// --- Tours & Travels ---
+model TourPackage {
+  id          String    @id @default(uuid())
+  name        String
+  description String
+  destination String
+  price       Float
+  duration    Int       // Days
+  images      String[]
+  bookings    Booking[]
+}
+
+model Booking {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  packageId String
+  package   TourPackage @relation(fields: [packageId], references: [id])
+  date      DateTime
+  status    String      @default("CONFIRMED")
+  createdAt DateTime    @default(now())
+}
+
+// --- Real Estate ---
+model Property {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  price       Float
+  location    String
+  type        String   // RENT, BUY
+  bedrooms    Int
+  area        Float    // sqft
+  images      String[]
+  agentId     String
+  agent       User     @relation(fields: [agentId], references: [id])
+  createdAt   DateTime @default(now())
+}
